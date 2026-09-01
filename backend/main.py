@@ -6,6 +6,7 @@ from database import get_db, engine, Base
 import models
 import schemas
 from auth import hash_password, verify_password, create_access_token
+from dependencies import get_current_user
 app = FastAPI(title="Food Freshness Monitoring Platform")
 Base.metadata.create_all(bind=engine)
 # Allow the React frontend (running on a different port) to call this API
@@ -50,3 +51,6 @@ def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
 
     access_token = create_access_token(data={"sub": user.email, "role": user.role})
     return {"access_token": access_token, "token_type": "bearer"}
+@app.get("/me", response_model=schemas.UserResponse)
+def read_current_user(current_user: models.User = Depends(get_current_user)):
+    return current_user
