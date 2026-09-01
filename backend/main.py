@@ -5,7 +5,7 @@ from sqlalchemy import text
 from database import get_db, engine, Base
 import models
 import schemas
-from auth import hash_password
+from auth import hash_password, verify_password, create_access_token
 app = FastAPI(title="Food Freshness Monitoring Platform")
 Base.metadata.create_all(bind=engine)
 # Allow the React frontend (running on a different port) to call this API
@@ -41,3 +41,12 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return new_user
+@app.post("/login", response_model=schemas.Token)
+def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == credentials.email).first()
+
+    if not user or not verify_password(credentials.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+
+    access_token = create_access_token(data={"sub": user.email, "role": user.role})
+    return {"access_token": access_token, "token_type": "bearer"}
